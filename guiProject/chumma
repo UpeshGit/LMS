@@ -1,0 +1,164 @@
+package com.upesh.window.actionhandler;
+
+import java.awt.event.ActionEvent;
+import java.text.Format;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map.Entry;
+
+import javax.swing.AbstractAction;
+import javax.swing.JComponent;
+import javax.swing.JSpinner;
+import javax.swing.JTable;
+import javax.swing.JTextField;
+import javax.swing.table.AbstractTableModel;
+import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableModel;
+
+import com.toedter.calendar.JDateChooser;
+import com.upesh.utilities.PropertyReader;
+import com.upesh.vo.StockVO;
+import com.upesh.window.design.HomeWindow;
+
+public  class AddStockAction extends AbstractAction {
+	
+	private static final long serialVersionUID = 1L;
+	public static String modOfAddition = "IND";
+	public List<StockVO> stocks = new ArrayList<StockVO>();
+	HashMap<String, JComponent> componentMap;
+	
+	
+	public AddStockAction() {
+		putValue(NAME, "Add stock");
+		putValue(SHORT_DESCRIPTION, "Some short description");
+	}
+	
+	public void actionPerformed(ActionEvent e) {
+		componentMap = HomeWindow.getWindow().componentMap;
+		initialize(componentMap);
+	}
+	
+	void initialize(HashMap<String, JComponent> componentMap){
+		HomeWindow.getWindow().focusJPanel("addStockPanel",1000,300);
+		HomeWindow.getWindow().setFrameLabelValue("titleLabel", "Add Stock");
+		
+		SimpleDateFormat format = new SimpleDateFormat("dd-MM-yyyy");
+		
+		componentMap.get("optionsPanel").setVisible(true);
+		Calendar cal = Calendar.getInstance();
+		cal.setTime(new Date());
+		((JDateChooser)componentMap.get("addStockDateChooser")).setCalendar(cal);
+		modOfAddition = "IND";
+		changeLayout();
+	}
+	
+	public static void changeLayout(){
+		
+		if(HomeWindow.getWindow()!=null){
+			HashMap<String, JComponent> addStockComponents = HomeWindow.getWindow().componentsPerPanelMap.get("addStockPanel");
+			/***
+			 * addStockPanel
+			 * addStockDateChooser , amount,  quantity, endingSerial , startingSerial , total , 
+			 * startingSerialLabel, AmountLabel, endingSerialLabel , quantityLabel , totalLabel
+			 * button
+			 *  
+			 */
+			
+			switch (modOfAddition) {
+			case "IND":
+				String arr[] = {"dateChooser",  "startingSerialLabel", "startingSerial","AmountLabel", "amount", "totalLabel", "total" , "button"}; 
+				List<String> requiredFields = Arrays.asList(arr);
+				for(Entry<String, JComponent> entry : addStockComponents.entrySet()){
+					if(requiredFields.contains(entry.getKey())){
+						entry.getValue().setVisible(true);
+					}
+						
+					else
+						entry.getValue().setVisible(false);
+				}
+				break;
+
+			case "BLKCNT":
+				for(Entry<String, JComponent> entry : addStockComponents.entrySet()){
+					entry.getValue().setVisible(true);
+				}
+				break;
+			default:
+				break;
+			}
+		}
+		
+	}
+	
+	public void addStock(){
+		StockVO stockVO = null;
+		HashMap<String, JComponent> addStockComponents = HomeWindow.getWindow().componentsPerPanelMap.get("addStockPanel");
+		HashMap<String, JComponent> viewStockComponents = HomeWindow.getWindow().componentsPerPanelMap.get("viewStockPanel");
+		String serialNo = ((JTextField)addStockComponents.get("startingSerial")).getText();
+		String endSerialNo = ((JTextField)addStockComponents.get("endingSerial")).getText();
+		Integer amount =  (Integer) ((JSpinner)addStockComponents.get("amount")).getValue();
+		Integer quantity = (Integer) ((JSpinner)addStockComponents.get("quantity")).getValue();
+		Date date = (Date) ((JDateChooser)addStockComponents.get("dateChooser")).getDate();
+		
+		int numberPortion = Integer.parseInt(PropertyReader.getPropertyValue("serialNumberPortion"));
+		componentMap.get("viewStockPanel").setVisible(true);
+		
+		
+		
+		if(modOfAddition.equals("IND")){
+			stockVO = new StockVO();
+			stockVO.setSerialNo(serialNo);
+			stockVO.setAmount(amount);
+			stockVO.setTicketDate(date);
+			stockVO.setStockDate(new Date());
+			this.stocks.add(stockVO);
+		}else if(modOfAddition.equalsIgnoreCase("BLKCNT")){
+			for(int ind=0;ind<quantity;ind++){
+				stockVO = new StockVO();
+				stockVO.setSerialNo(serialNo);
+				stockVO.setAmount(amount);
+				stockVO.setTicketDate(date);
+				stockVO.setStockDate(new Date());
+				this.stocks.add(stockVO);
+				
+				String numberPart = serialNo.substring(serialNo.length()-numberPortion, serialNo.length());
+				String stringPart = serialNo.substring(0,serialNo.length()-numberPortion);
+				int nextSerial = Integer.parseInt(numberPart) +1;
+				serialNo = stringPart + nextSerial;
+			}
+		}
+		
+	//	StockVO[] stockArr = (StockVO[]) stocks.toArray();
+	    Object mainArr[][] = new Object[stocks.size()][5];
+	    int i =0;
+	    SimpleDateFormat fomat = new SimpleDateFormat("DD - MMM - YYYY");
+	    
+		for(StockVO stockVO2 : stocks){
+			Object[] subArr = new Object[5];
+			subArr[0] = stockVO2.getSerialNo();
+			subArr[1] = stockVO2.getAmount();
+			subArr[2] = fomat.format(stockVO2.getTicketDate());
+			subArr[3] = fomat.format(stockVO2.getStockDate());
+			subArr[4] = new Boolean(stockVO2.getShouldRemove());
+			mainArr[i] = subArr;
+			i++;
+		}
+		
+		
+
+	
+		String[] columns = {"TICKET NUMBER          " ,  " AMOUNT    ","TICKET DATE       ","STOCK ADDED ON    ", "REMOVE   "}; 
+		JTable jtable = (JTable)viewStockComponents.get("table");
+		jtable.setModel(new DefaultTableModel(mainArr,   columns));
+	}
+	
+	
+	
+
+
+}
